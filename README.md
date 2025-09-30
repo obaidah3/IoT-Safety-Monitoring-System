@@ -495,6 +495,13 @@ When hazard detected:
 
 ## 🌐 Web Dashboard
 
+<img width="1893" height="1075" alt="Image" src="https://github.com/user-attachments/assets/19af74a9-41ec-456e-8284-8d61ea230d2f" />
+<img width="1894" height="289" alt="Image" src="https://github.com/user-attachments/assets/0a20f2da-ea04-4779-9f68-78670c826313" />
+<img width="1893" height="763" alt="Image" src="https://github.com/user-attachments/assets/5026b32c-fa2e-419b-9d55-c4576ed01b7d" />
+<img width="1887" height="575" alt="Image" src="https://github.com/user-attachments/assets/af5d5838-b9ce-4e1b-bec2-28bf995f629f" />
+<img width="1889" height="884" alt="Image" src="https://github.com/user-attachments/assets/3c4fa347-4b96-4e5a-91ff-ad04a0c9d605" />
+
+
 ### Features
 
 #### Real-time Monitoring
