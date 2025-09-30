@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Dashboard Pro - Complete Monitoring</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --info: #3b82f6;
+            --primary: #667eea;
+            --dark: #0f172a;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            color: white;
+        }
+
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .animated-bg::before,
+        .animated-bg::after {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.25;
+            animation: float 25s infinite ease-in-out;
+        }
+
+        .animated-bg::before {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            top: -200px;
+            left: -200px;
+        }
+
+        .animated-bg::after {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            bottom: -200px;
+            right: -200px;
+            animation-delay: 5s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(120px, -120px) scale(1.15); }
+            66% { transform: translate(-120px, 120px) scale(0.85); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 25px;
+        }
+
+        /* Header Styles */
+        header {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 25px 35px;
+            border-radius: 20px;
+            box-shadow: 0 25px 65px rgba(0, 0, 0, 0.35);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            width: 65px;
+            height: 65px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.45);
+            animation: rotate-logo 10s infinite linear;
+        }
+
+        @keyframes rotate-logo {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(5deg); }
+        }
+
+        h1 {
+            font-size: 2.3em;
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 0.88em;
+            font-weight: 500;
+            margin-top: 6px;
+        }
+
+        .status-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.85em;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .status-badge.online {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .status-badge.offline {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .status-badge.warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .status-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+        }
+
+        .status-badge.online .status-dot {
+            background: #10b981;
+            box-shadow: 0 0 12px #10b981;
+        }
+
+        .status-badge.offline .status-dot {
+            background: #ef4444;
+            box-shadow: 0 0 12px #ef4444;
+        }
+
+        .status-badge.warning .status-dot {
+            background: #f59e0b;
+            box-shadow: 0 0 12px #f59e0b;
+        }
+
+        /* Critical Alerts */
+        .critical-alerts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .alert-card {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 28px;
+            border-radius: 18px;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .alert-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            transition: all 0.4s ease;
+        }
+
+        .alert-card.danger::before {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+            box-shadow: 0 0 20px #ef4444;
+        }
+
+        .alert-card.safe::before {
+            background: linear-gradient(90deg, #10b981, #059669);
+            box-shadow: 0 0 20px #10b981;
+        }
+
+        .alert-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.45);
+        }
+
+        .alert-icon {
+            font-size: 3.8em;
+            margin-bottom: 12px;
+            display: inline-block;
+            animation: float-icon 3.5s infinite ease-in-out;
+        }
+
+        @keyframes float-icon {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(3deg); }
+        }
+
+        .alert-title {
+            font-size: 1.15em;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.88);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+        }
+
+        .alert-value {
+            font-size: 1.5em;
+            font-weight: 800;
+            text-shadow: 0 3px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .alert-value.danger-text { color: #ef4444; }
+        .alert-value.safe-text { color: #10b981; }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        /* Sensors Grid */
+        .sensors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        .sensor-card {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 25px;
+            border-radius: 18px;
+            transition: all 0.4s ease;
+        }
+
+        .sensor-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .sensor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sensor-title {
+            font-size: 1.25em;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+        }
+
+        .sensor-icon {
+            font-size: 2.8em;
+            filter: drop-shadow(0 6px 18px rgba(255, 255, 255, 0.35));
+        }
+
+        .sensor-data {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 18px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.3s ease;
+        }
+
+        .data-row:hover {
+            background: rgba(255, 255, 255, 0.09);
+            border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .data-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 600;
+            font-size: 0.92em;
+        }
+
+        .data-value {
+            font-weight: 800;
+            color: #ffffff;
+            font-size: 1.35em;
+            text-shadow: 0 3px 12px rgba(255, 255, 255, 0.25);
+        }
+
+        /* System Info Panel */
+        .system-info {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .info-card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.3);
+        }
+
+        .info-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: rgba(255, 255, 255, 0.85);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9em;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 700;
+        }
+
+        .signal-indicator {
+            display: inline-flex;
+            gap: 3px;
+            align-items: flex-end;
+        }
+
+        .signal-bar {
+            width: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .signal-bar.active {
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981;
+        }
+
+        .signal-bar:nth-child(1) { height: 8px; }
+        .signal-bar:nth-child(2) { height: 12px; }
+        .signal-bar:nth-child(3) { height: 16px; }
+        .signal-bar:nth-child(4) { height: 20px; }
+
+        /* Charts Section */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(550px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 28px;
+            border-radius: 18px;
+            transition: all 0.4s ease;
+        }
+
+        .chart-card:hover {
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .chart-title {
+            font-size: 1.45em;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 22px;
+            text-align: center;
+            letter-spacing: 0.4px;
+        }
+
+        /* Alerts History */
+        .alerts-history {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 25px;
+            border-radius: 18px;
+            margin-bottom: 30px;
+        }
+
+        .alerts-title {
+            font-size: 1.4em;
+            font-weight: 800;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border-left: 4px solid;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .alert-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(5px);
+        }
+
+        .alert-item.fire-alert {
+            border-color: #ef4444;
+        }
+
+        .alert-item.gas-alert {
+            border-color: #f59e0b;
+        }
+
+        .alert-icon-small {
+            font-size: 1.8em;
+        }
+
+        .alert-details {
+            flex: 1;
+        }
+
+        .alert-message {
+            font-weight: 700;
+            font-size: 1.05em;
+            margin-bottom: 4px;
+        }
+
+        .alert-time {
+            font-size: 0.85em;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Footer Stats */
+        .footer-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 22px;
+            border-radius: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 55px rgba(0, 0, 0, 0.35);
+        }
+
+        .stat-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 0.88em;
+            color: rgba(255, 255, 255, 0.55);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: 900;
+            color: #ffffff;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .loading-content {
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 80px;
+            height: 80px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 25px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: white;
+        }
+
+        .loading-subtext {
+            font-size: 1em;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 10px;
+        }
+
+        /* Error Message */
+        .error-message {
+            background: rgba(239, 68, 68, 0.15);
+            border: 2px solid rgba(239, 68, 68, 0.4);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .error-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .error-text {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #ef4444;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1400px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            header {
+                padding: 22px;
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .sensors-grid,
+            .critical-alerts,
+            .footer-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .logo {
+                width: 55px;
+                height: 55px;
+                font-size: 26px;
+            }
+
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-bg"></div>
+    
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Connecting to IoT System</div>
+            <div class="loading-subtext">Initializing sensors...</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <div class="logo">🔥</div>
+                <div>
+                    <h1>IoT Dashboard Pro</h1>
+                    <div class="subtitle">Advanced Environmental Monitoring & Safety System</div>
+                </div>
+            </div>
+            <div class="status-group">
+                <div class="status-badge offline" id="espStatus">
+                    <div class="status-dot"></div>
+                    <span>ESP32: Offline</span>
+                </div>
+                <div class="status-badge offline" id="firebaseStatus">
+                    <div class="status-dot"></div>
+                    <span>Firebase: Disconnected</span>
+                </div>
+            </div>
+        </header>
+
+        <div id="mainContent" style="display: none;">
+            <!-- Critical Alerts -->
+            <div class="critical-alerts">
+                <div class="alert-card safe" id="dangerCard">
+                    <div class="alert-icon">⚠️</div>
+                    <div class="alert-title">System Status</div>
+                    <div class="alert-value safe-text" id="dangerStatus">Loading...</div>
+                </div>
+                <div class="alert-card safe" id="fireCard">
+                    <div class="alert-icon">🔥</div>
+                    <div class="alert-title">Fire Detection</div>
+                    <div class="alert-value safe-text" id="fireStatus">Loading...</div>
+                </div>
+                <div class="alert-card safe" id="gasCard">
+                    <div class="alert-icon">💨</div>
+                    <div class="alert-title">Gas Detection</div>
+                    <div class="alert-value safe-text" id="gasDetected">Loading...</div>
+                </div>
+            </div>
+
+            <!-- Main Grid -->
+            <div class="main-grid">
+                <!-- Left: Sensors -->
+                <div class="sensors-grid">
+                    <!-- Climate Control -->
+                    <div class="sensor-card">
+                        <div class="sensor-header">
+                            <span class="sensor-title">Climate Control</span>
+                            <span class="sensor-icon">🌡️</span>
+                        </div>
+                        <div class="sensor-data">
+                            <div class="data-row">
+                                <span class="data-label">Temperature</span>
+                                <span class="data-value" id="temperature">--</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Avg Temperature</span>
+                                <span class="data-value" id="tempAvg">--</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Humidity</span>
+                                <span class="data-value" id="humidity">--</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Avg Humidity</span>
+                                <span class="data-value" id="humAvg">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Flame Sensor -->
+                    <div class="sensor-card">
+                        <div class="sensor-header">
+                            <span class="sensor-title">Flame Sensor</span>
+                            <span class="sensor-icon">🔥</span>
+                        </div>
+                        <div class="sensor-data">
+                            <div class="data-row">
+                                <span class="data-label">Digital State</span>
+                                <span class="data-value" id="flameDigital">--</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Analog Reading</span>
+                                <span class="data-value" id="flameAnalog">--</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Sensor Status</span>
+                                <span class="data-value" id="flameStatus">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gas Sensor -->
+                    <div class="sensor-card">
+                        <div class="sensor-header">
+                            <span class="sensor-title">Gas Sensor</span>
+                            <span class="sensor-icon">💨</span>
+                        </div>
+                        <div class="sensor-data">
+                            <div class="data-row">
+                                <span class="data-label">Digital State</span>
+                                <span class="data-value" id="gasDigital">--</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Analog Reading</span>
+                                <span class="data-value" id="gasAnalog">--</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Sensor Status</span>
+                                <span class="data-value" id="gasStatus">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: System Info -->
+                <div class="system-info">
+                    <!-- Connection Info -->
+                    <div class="info-card">
+                        <div class="info-title">🌐 Connection Status</div>
+                        <div class="info-row">
+                            <span class="info-label">WiFi</span>
+                            <span class="info-value" id="wifiStatus">--</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Signal</span>
+                            <span class="info-value" id="wifiSignal">
+                                <span class="signal-indicator">
+                                    <span class="signal-bar"></span>
+                                    <span class="signal-bar"></span>
+                                    <span class="signal-bar"></span>
+                                    <span class="signal-bar"></span>
+                                </span>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Last Update</span>
+                            <span class="info-value" id="lastUpdate">--</span>
+                        </div>
+                    </div>
+
+                    <!-- System Stats -->
+                    <div class="info-card">
+                        <div class="info-title">📊 System Statistics</div>
+                        <div class="info-row">
+                            <span class="info-label">Uptime</span>
+                            <span class="info-value" id="uptime">--</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Successful Reads</span>
+                            <span class="info-value" id="successReads">--</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Failed Reads</span>
+                            <span class="info-value" id="failedReads">--</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">WiFi Disconnects</span>
+                            <span class="info-value" id="wifiDisconnects">--</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Firebase Errors</span>
+                            <span class="info-value" id="firebaseErrors">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Device Info -->
+                    <div class="info-card">
+                        <div class="info-title">💻 Device Info</div>
+                        <div class="info-row">
+                            <span class="info-label">Free Memory</span>
+                            <span class="info-value" id="freeHeap">--</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Sensor Health</span>
+                            <span class="info-value" id="sensorHealth">--</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Timestamp</span>
+                            <span class="info-value" id="timestamp">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-title">📊 Temperature & Humidity Trends</div>
+                    <canvas id="tempHumChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">📈 Sensor Analog Readings</div>
+                    <canvas id="analogChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Alerts -->
+            <div class="alerts-history">
+                <div class="alerts-title">
+                    <span>🚨</span>
+                    <span>Recent Alerts</span>
+                </div>
+                <div id="alertsList">
+                    <div style="text-align: center; color: rgba(255,255,255,0.5); padding: 20px;">
+                        No recent alerts
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Stats -->
+            <div class="footer-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">📡</div>
+                    <div class="stat-label">Data Points</div>
+                    <div class="stat-value" id="dataPoints">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⚡</div>
+                    <div class="stat-label">Update Rate</div>
+                    <div class="stat-value">3s</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-label">Accuracy</div>
+                    <div class="stat-value" id="accuracy">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🔒</div>
+                    <div class="stat-label">Security</div>
+                    <div class="stat-value">Active</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "apiKey",
+            databaseURL: "databaseURL",
+            authDomain: "authDomain"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const auth = firebase.auth();
+
+        let tempHumChart, analogChart;
+        let historyData = {
+            temperature: [],
+            humidity: [],
+            flameAnalog: [],
+            gasAnalog: [],
+            timestamps: []
+        };
+        let recentAlerts = [];
+        let dataPointsCount = 0;
+        let lastDataTime = 0;
+
+        // Authentication
+        auth.signInWithEmailAndPassword("example@gmail.com", "Password")
+            .then(() => {
+                updateStatus('firebaseStatus', true, 'Firebase: Connected');
+                initializeCharts();
+                listenToData();
+                listenToSystemStatus();
+                listenToAlerts();
+            })
+            .catch((error) => {
+                console.error("Authentication error:", error);
+                updateStatus('firebaseStatus', false, 'Firebase: Auth Failed');
+                showError("Failed to connect to Firebase: " + error.message);
+            });
+
+        function updateStatus(elementId, isOnline, text) {
+            const el = document.getElementById(elementId);
+            if (isOnline) {
+                el.className = 'status-badge online';
+            } else {
+                el.className = 'status-badge offline';
+            }
+            el.innerHTML = `<div class="status-dot"></div><span>${text}</span>`;
+        }
+
+        function initializeCharts() {
+            const ctx1 = document.getElementById('tempHumChart').getContext('2d');
+            tempHumChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: [],
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true
+                    }, {
+                        label: 'Humidity (%)',
+                        data: [],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: 'rgba(255, 255, 255, 0.85)',
+                                font: { size: 14, weight: 'bold' },
+                                padding: 18
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: { size: 14 },
+                            bodyFont: { size: 13 }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: 'rgba(255, 255, 255, 0.75)', font: { size: 12 } }
+                        },
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: 'rgba(255, 255, 255, 0.75)', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('analogChart').getContext('2d');
+            analogChart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Flame Sensor',
+                        data: [],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true
+                    }, {
+                        label: 'Gas Sensor',
+                        data: [],
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: 'rgba(255, 255, 255, 0.85)',
+                                font: { size: 14, weight: 'bold' },
+                                padding: 18
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: { size: 14 },
+                            bodyFont: { size: 13 }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 4095,
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: 'rgba(255, 255, 255, 0.75)', font: { size: 12 } }
+                        },
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: 'rgba(255, 255, 255, 0.75)', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function listenToData() {
+            const sensorsRef = database.ref('Sensors');
+            
+            sensorsRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    dataPointsCount++;
+                    lastDataTime = Date.now();
+                    updateStatus('espStatus', true, 'ESP32: Online');
+                    updateUI(data);
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                }
+            });
+
+            // Check for ESP32 disconnection
+            setInterval(() => {
+                if (Date.now() - lastDataTime > 10000 && lastDataTime > 0) {
+                    updateStatus('espStatus', false, 'ESP32: No Data');
+                }
+            }, 5000);
+        }
+
+        function listenToSystemStatus() {
+            const statusRef = database.ref('SystemStatus');
+            
+            statusRef.on('value', (snapshot) => {
+                const status = snapshot.val();
+                if (status) {
+                    document.getElementById('uptime').textContent = status.uptime || '--';
+                    document.getElementById('successReads').textContent = status.successful_reads || '0';
+                    document.getElementById('failedReads').textContent = status.failed_reads || '0';
+                    document.getElementById('wifiDisconnects').textContent = status.wifi_disconnects || '0';
+                    document.getElementById('firebaseErrors').textContent = status.firebase_errors || '0';
+                    document.getElementById('freeHeap').textContent = status.free_heap ? (status.free_heap / 1024).toFixed(1) + ' KB' : '--';
+                    
+                    updateWiFiSignal(status.wifi_signal);
+                    
+                    const accuracy = status.successful_reads && (status.successful_reads + status.failed_reads) > 0 
+                        ? ((status.successful_reads / (status.successful_reads + status.failed_reads)) * 100).toFixed(1) + '%'
+                        : '--';
+                    document.getElementById('accuracy').textContent = accuracy;
+                }
+            });
+        }
+
+        function listenToAlerts() {
+            const alertsRef = database.ref('Alerts').limitToLast(10);
+            
+            alertsRef.on('value', (snapshot) => {
+                recentAlerts = [];
+                snapshot.forEach((child) => {
+                    recentAlerts.unshift(child.val());
+                });
+                displayAlerts();
+            });
+        }
+
+        function displayAlerts() {
+            const alertsList = document.getElementById('alertsList');
+            
+            if (recentAlerts.length === 0) {
+                alertsList.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 20px;">No recent alerts</div>';
+                return;
+            }
+            
+            alertsList.innerHTML = recentAlerts.map(alert => {
+                const alertClass = alert.type === 'FIRE' ? 'fire-alert' : 'gas-alert';
+                const icon = alert.type === 'FIRE' ? '🔥' : '💨';
+                return `
+                    <div class="alert-item ${alertClass}">
+                        <div class="alert-icon-small">${icon}</div>
+                        <div class="alert-details">
+                            <div class="alert-message">${alert.message}</div>
+                            <div class="alert-time">${alert.timestamp}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateWiFiSignal(rssi) {
+            if (!rssi) return;
+            
+            const bars = document.querySelectorAll('.signal-bar');
+            let activeBars = 0;
+            
+            if (rssi >= -50) activeBars = 4;
+            else if (rssi >= -60) activeBars = 3;
+            else if (rssi >= -70) activeBars = 2;
+            else if (rssi >= -80) activeBars = 1;
+            
+            bars.forEach((bar, index) => {
+                if (index < activeBars) {
+                    bar.classList.add('active');
+                } else {
+                    bar.classList.remove('active');
+                }
+            });
+            
+            document.getElementById('wifiStatus').textContent = rssi >= -50 ? 'Excellent' : 
+                                                                 rssi >= -60 ? 'Good' : 
+                                                                 rssi >= -70 ? 'Fair' : 
+                                                                 rssi >= -80 ? 'Weak' : 'Very Weak';
+        }
+
+        function updateUI(data) {
+            // Update Alert Cards
+            updateAlertCard('dangerCard', 'dangerStatus', data.danger, 'DANGER DETECTED!', 'All Systems Normal');
+            updateAlertCard('fireCard', 'fireStatus', data.fire_detected, 'FIRE DETECTED!', 'No Fire');
+            updateAlertCard('gasCard', 'gasDetected', data.gas_detected, 'GAS DETECTED!', 'No Gas');
+
+            // Update Temperature & Humidity
+            const temp = data.temperature !== -999 ? data.temperature : 'ERROR';
+            const hum = data.humidity !== -999 ? data.humidity : 'ERROR';
+            const tempAvg = data.temperature_avg !== -999 ? data.temperature_avg : 'ERROR';
+            const humAvg = data.humidity_avg !== -999 ? data.humidity_avg : 'ERROR';
+            
+            document.getElementById('temperature').textContent = typeof temp === 'number' ? temp.toFixed(1) + ' °C' : temp;
+            document.getElementById('humidity').textContent = typeof hum === 'number' ? hum.toFixed(1) + ' %' : hum;
+            document.getElementById('tempAvg').textContent = typeof tempAvg === 'number' ? tempAvg.toFixed(1) + ' °C' : tempAvg;
+            document.getElementById('humAvg').textContent = typeof humAvg === 'number' ? humAvg.toFixed(1) + ' %' : humAvg;
+
+            // Update Flame Sensor
+            document.getElementById('flameDigital').textContent = data.flame?.digital === 1 ? 'HIGH' : 'LOW';
+            document.getElementById('flameAnalog').textContent = data.flame?.analog || '--';
+            document.getElementById('flameStatus').textContent = data.flame?.digital === 1 ? '⚠️ ACTIVE' : '✓ Normal';
+
+            // Update Gas Sensor
+            document.getElementById('gasDigital').textContent = data.gas?.digital === 1 ? 'HIGH' : 'LOW';
+            document.getElementById('gasAnalog').textContent = data.gas?.analog || '--';
+            document.getElementById('gasStatus').textContent = data.gas?.digital === 0 ? '⚠️ ACTIVE' : '✓ Normal';
+
+            // Update Sensor Health
+            document.getElementById('sensorHealth').textContent = data.sensor_status || '--';
+            document.getElementById('timestamp').textContent = data.timestamp || '--';
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            document.getElementById('dataPoints').textContent = dataPointsCount;
+
+            // Update History and Charts
+            updateHistoryData(data);
+            updateCharts();
+        }
+
+        function updateAlertCard(cardId, statusId, value, dangerText, safeText) {
+            const card = document.getElementById(cardId);
+            const status = document.getElementById(statusId);
+            
+            if (value === 1) {
+                card.className = 'alert-card danger';
+                status.textContent = dangerText;
+                status.className = 'alert-value danger-text';
+            } else {
+                card.className = 'alert-card safe';
+                status.textContent = safeText;
+                status.className = 'alert-value safe-text';
+            }
+        }
+
+        function updateHistoryData(data) {
+            const maxPoints = 15;
+            
+            if (data.temperature !== -999) {
+                historyData.temperature.push(data.temperature);
+            }
+            if (data.humidity !== -999) {
+                historyData.humidity.push(data.humidity);
+            }
+            
+            historyData.flameAnalog.push(data.flame?.analog || 0);
+            historyData.gasAnalog.push(data.gas?.analog || 0);
+            
+            const time = new Date().toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            historyData.timestamps.push(time);
+
+            // Keep only last N points
+            if (historyData.temperature.length > maxPoints) {
+                historyData.temperature.shift();
+                historyData.humidity.shift();
+                historyData.flameAnalog.shift();
+                historyData.gasAnalog.shift();
+                historyData.timestamps.shift();
+            }
+        }
+
+        function updateCharts() {
+            // Update Temperature & Humidity Chart
+            tempHumChart.data.labels = historyData.timestamps;
+            tempHumChart.data.datasets[0].data = historyData.temperature;
+            tempHumChart.data.datasets[1].data = historyData.humidity;
+            tempHumChart.update('none');
+
+            // Update Analog Sensors Chart
+            analogChart.data.labels = historyData.timestamps;
+            analogChart.data.datasets[0].data = historyData.flameAnalog;
+            analogChart.data.datasets[1].data = historyData.gasAnalog;
+            analogChart.update('none');
+        }
+
+        function showError(message) {
+            document.getElementById('loadingOverlay').innerHTML = `
+                <div class="loading-content">
+                    <div class="error-message">
+                        <div class="error-icon">❌</div>
+                        <div class="error-text">${message}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Connection Monitor
+        setInterval(() => {
+            const now = Date.now();
+            if (lastDataTime > 0 && now - lastDataTime > 15000) {
+                updateStatus('espStatus', false, 'ESP32: Disconnected');
+            }
+        }, 5000);
+
+        // Auto-refresh charts every 30 seconds
+        setInterval(() => {
+            if (tempHumChart && analogChart) {
+                tempHumChart.update();
+                analogChart.update();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
