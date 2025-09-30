@@ -207,6 +207,8 @@ Install via Arduino Library Manager:
 
 ### 1. Hardware Setup
 
+<img width="1251" height="896" alt="Image" src="https://github.com/user-attachments/assets/556d19a8-6f11-46b0-b634-2b20ce302632" />
+
 1. **Connect the DHT11 Sensor:**
    - VCC → 3.3V or 5V
    - GND → GND
