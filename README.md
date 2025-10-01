@@ -37,6 +37,16 @@ This IoT Safety Monitoring System is a complete solution for environmental monit
 
 The system is designed for residential, commercial, or industrial applications where continuous environmental monitoring and rapid hazard detection are critical.
 
+## 🎥 Project Demo Video
+
+Here’s a quick demo of the project in action:
+
+[![Watch the video](https://img.youtube.com/vi/hvo8791LWbA/0.jpg)](https://youtu.be/hvo8791LWbA)
+
+Click the thumbnail above or use the link below to watch on YouTube:  
+👉 https://youtu.be/hvo8791LWbA
+
+
 ## ✨ Features
 
 ### Hardware Features
